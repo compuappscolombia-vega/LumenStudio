@@ -1,0 +1,241 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Perfil privado del cineasta o productor autenticado en AUTEUR Studio.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "preferredStyle": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "role": {
+          "type": "string",
+          "enum": ["director"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "displayName", "email", "role", "createdAt", "updatedAt"]
+    },
+    "StudioProject": {
+      "title": "StudioProject",
+      "description": "Proyecto cinematográfico independiente almacenado para un usuario.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 180
+        },
+        "genreStyle": {
+          "type": "string",
+          "maxLength": 180
+        },
+        "defaultSourceType": {
+          "type": "string",
+          "enum": ["book", "audiobook", "story"]
+        },
+        "continuityBible": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "sequencesCount": {
+          "type": "integer"
+        },
+        "assetsCount": {
+          "type": "integer"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "ownerId",
+        "title",
+        "genreStyle",
+        "defaultSourceType",
+        "continuityBible",
+        "sequencesCount",
+        "assetsCount",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ProjectSequence": {
+      "title": "ProjectSequence",
+      "description": "Secuencia producida dentro de un proyecto, con estado borrador o versión final.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "projectId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "versionStatus": {
+          "type": "string",
+          "enum": ["draft", "final"]
+        },
+        "sourceType": {
+          "type": "string",
+          "enum": ["book", "audiobook", "story"]
+        },
+        "directorStyle": {
+          "type": "string",
+          "maxLength": 180
+        },
+        "aspectRatio": {
+          "type": "string",
+          "maxLength": 24
+        },
+        "logline": {
+          "type": "string",
+          "maxLength": 1200
+        },
+        "directorVision": {
+          "type": "string",
+          "maxLength": 6000
+        },
+        "continuitySummary": {
+          "type": "string",
+          "maxLength": 3000
+        },
+        "sequenceData": {
+          "type": "object",
+          "description": "Mapa nativo con cámara, paleta, iluminación, planos, sonido, informe de audio, VFX, guion y storyboard."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "projectId",
+        "ownerId",
+        "title",
+        "versionStatus",
+        "sourceType",
+        "directorStyle",
+        "aspectRatio",
+        "logline",
+        "directorVision",
+        "continuitySummary",
+        "sequenceData",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "LearningLesson": {
+      "title": "LearningLesson",
+      "description": "Lección de autoaprendizaje y mejora continua extraída de evaluaciones o producciones finales.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["camera", "lighting", "sound", "screenplay", "pacing", "continuity"]
+        },
+        "insight": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 1000
+        },
+        "rating": {
+          "type": "integer"
+        },
+        "sourceProjectTitle": {
+          "type": "string",
+          "maxLength": 180
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "ownerId", "category", "insight", "rating", "sourceProjectTitle", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Perfil privado del usuario autenticado (PII aislada por propietario)."
+    },
+    "/users/{userId}/projects/{projectId}": {
+      "schema": { "$ref": "#/entities/StudioProject" },
+      "description": "Proyectos cinematográficos del usuario."
+    },
+    "/users/{userId}/projects/{projectId}/sequences/{sequenceId}": {
+      "schema": { "$ref": "#/entities/ProjectSequence" },
+      "description": "Secuencias y expedientes cinematográficos (borrador o versión final) dentro de un proyecto."
+    },
+    "/users/{userId}/learning_memory/{lessonId}": {
+      "schema": { "$ref": "#/entities/LearningLesson" },
+      "description": "Memoria de autoaprendizaje y mejora continua del productor cinematográfico."
+    }
+  }
+}

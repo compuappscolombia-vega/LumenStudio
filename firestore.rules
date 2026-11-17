@@ -1,0 +1,200 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Global Hardened Primitives ---
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isVerifiedOwner(userId) {
+      return isVerifiedUser() && request.auth.uid == userId;
+    }
+
+    // --- Validation Helpers ---
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll(['uid', 'displayName', 'email', 'role', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'displayName', 'email', 'preferredStyle', 'role', 'createdAt', 'updatedAt'])
+        && data.uid == userId
+        && data.uid == request.auth.uid
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 200
+        && data.role == 'director'
+        && (!('preferredStyle' in data) || (data.preferredStyle is string && data.preferredStyle.size() <= 160))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidStudioProject(data, userId, projectId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'title', 'genreStyle', 'defaultSourceType',
+          'continuityBible', 'sequencesCount', 'assetsCount', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'title', 'genreStyle', 'defaultSourceType',
+          'continuityBible', 'sequencesCount', 'assetsCount', 'createdAt', 'updatedAt'
+        ])
+        && data.id == projectId
+        && data.ownerId == userId
+        && data.ownerId == request.auth.uid
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 180
+        && data.genreStyle is string && data.genreStyle.size() <= 180
+        && data.defaultSourceType in ['book', 'audiobook', 'story']
+        && data.continuityBible is string && data.continuityBible.size() <= 20000
+        && data.sequencesCount is int && data.sequencesCount >= 0 && data.sequencesCount <= 1000
+        && data.assetsCount is int && data.assetsCount >= 0 && data.assetsCount <= 5000
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidProjectSequence(data, userId, projectId, sequenceId) {
+      return data.keys().hasAll([
+          'id', 'projectId', 'ownerId', 'title', 'versionStatus', 'sourceType',
+          'directorStyle', 'aspectRatio', 'logline', 'directorVision',
+          'continuitySummary', 'sequenceData', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'projectId', 'ownerId', 'title', 'versionStatus', 'sourceType',
+          'directorStyle', 'aspectRatio', 'logline', 'directorVision',
+          'continuitySummary', 'sequenceData', 'createdAt', 'updatedAt'
+        ])
+        && data.id == sequenceId
+        && data.projectId == projectId
+        && data.ownerId == userId
+        && data.ownerId == request.auth.uid
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
+        && data.versionStatus in ['draft', 'final']
+        && data.sourceType in ['book', 'audiobook', 'story']
+        && data.directorStyle is string && data.directorStyle.size() <= 180
+        && data.aspectRatio is string && data.aspectRatio.size() <= 24
+        && data.logline is string && data.logline.size() <= 1200
+        && data.directorVision is string && data.directorVision.size() <= 6000
+        && data.continuitySummary is string && data.continuitySummary.size() <= 3000
+        && data.sequenceData is map
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidLearningLesson(data, userId, lessonId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'category', 'insight', 'rating', 'sourceProjectTitle', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'category', 'insight', 'rating', 'sourceProjectTitle', 'createdAt'
+        ])
+        && data.id == lessonId
+        && data.ownerId == userId
+        && data.ownerId == request.auth.uid
+        && data.category in ['camera', 'lighting', 'sound', 'screenplay', 'pacing', 'continuity']
+        && data.insight is string && data.insight.size() >= 5 && data.insight.size() <= 1000
+        && data.rating is int && data.rating >= 1 && data.rating <= 5
+        && data.sourceProjectTitle is string && data.sourceProjectTitle.size() <= 180
+        && data.createdAt is timestamp;
+    }
+
+    // --- Collection Rules ---
+    match /users/{userId} {
+      allow get: if isValidId(userId) && isOwner(userId);
+      allow list: if false;
+      allow create: if isValidId(userId)
+        && isVerifiedOwner(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(userId)
+        && isVerifiedOwner(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().role == existing().role
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'preferredStyle', 'updatedAt']);
+      allow delete: if false;
+
+      match /projects/{projectId} {
+        allow get: if isValidId(userId) && isValidId(projectId) && isOwner(userId);
+        allow list: if isValidId(userId) && isOwner(userId) && resource.data.ownerId == request.auth.uid;
+        allow create: if isValidId(userId) && isValidId(projectId)
+          && isVerifiedOwner(userId)
+          && isValidStudioProject(incoming(), userId, projectId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isValidId(userId) && isValidId(projectId)
+          && isVerifiedOwner(userId)
+          && isValidStudioProject(incoming(), userId, projectId)
+          && incoming().id == existing().id
+          && incoming().ownerId == existing().ownerId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && (
+            incoming().diff(existing()).affectedKeys().hasOnly(['title', 'genreStyle', 'continuityBible', 'updatedAt'])
+            || incoming().diff(existing()).affectedKeys().hasOnly(['sequencesCount', 'assetsCount', 'continuityBible', 'updatedAt'])
+          );
+        allow delete: if isValidId(userId) && isValidId(projectId) && isVerifiedOwner(userId);
+
+        match /sequences/{sequenceId} {
+          allow get: if isValidId(userId) && isValidId(projectId) && isValidId(sequenceId) && isOwner(userId);
+          allow list: if isValidId(userId) && isValidId(projectId) && isOwner(userId) && resource.data.ownerId == request.auth.uid;
+          allow create: if isValidId(userId) && isValidId(projectId) && isValidId(sequenceId)
+            && isVerifiedOwner(userId)
+            && isValidProjectSequence(incoming(), userId, projectId, sequenceId)
+            && exists(/databases/$(database)/documents/users/$(userId)/projects/$(projectId))
+            && incoming().createdAt == request.time
+            && incoming().updatedAt == request.time;
+          allow update: if isValidId(userId) && isValidId(projectId) && isValidId(sequenceId)
+            && isVerifiedOwner(userId)
+            && isValidProjectSequence(incoming(), userId, projectId, sequenceId)
+            && existing().versionStatus == 'draft'
+            && incoming().id == existing().id
+            && incoming().projectId == existing().projectId
+            && incoming().ownerId == existing().ownerId
+            && incoming().createdAt == existing().createdAt
+            && incoming().updatedAt == request.time
+            && (
+              (incoming().versionStatus == 'final'
+                && incoming().diff(existing()).affectedKeys().hasOnly(['versionStatus', 'updatedAt']))
+              || incoming().diff(existing()).affectedKeys().hasOnly(['title', 'logline', 'directorVision', 'sequenceData', 'continuitySummary', 'updatedAt'])
+            );
+          allow delete: if isValidId(userId) && isValidId(projectId) && isValidId(sequenceId)
+            && isVerifiedOwner(userId)
+            && existing().versionStatus == 'draft';
+        }
+      }
+
+      match /learning_memory/{lessonId} {
+        allow get: if isValidId(userId) && isValidId(lessonId) && isOwner(userId);
+        allow list: if isValidId(userId) && isOwner(userId) && resource.data.ownerId == request.auth.uid;
+        allow create: if isValidId(userId) && isValidId(lessonId)
+          && isVerifiedOwner(userId)
+          && isValidLearningLesson(incoming(), userId, lessonId)
+          && incoming().createdAt == request.time;
+        allow update: if false;
+        allow delete: if isValidId(userId) && isValidId(lessonId) && isVerifiedOwner(userId);
+      }
+    }
+  }
+}

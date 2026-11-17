@@ -1,0 +1,8 @@
+{
+  "name": "Remix AUTEUR Studio",
+  "description": "Estudio independiente de producción cinematográfica de Hollywood que transforma libros, audiolibros e historias en guiones técnicos, planos de cámara, diseño sonoro, iluminación, VFX y storyboards.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
